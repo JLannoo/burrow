@@ -19,6 +19,9 @@ var generateCmd = &cobra.Command{
 	Short: "Generate a new password",
 	Long:  `Generate a new password with the specified length.`,
 	Args:  cobra.RangeArgs(1, 2),
+	PreRun: func(cmd *cobra.Command, args []string) {
+		auth.Manager.Authenticate()
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
 
@@ -31,8 +34,6 @@ var generateCmd = &cobra.Command{
 				return
 			}
 		}
-
-		fmt.Printf("Generating password for %s with length %d\n", name, length)
 
 		pg := crypto.PasswordGenerator{
 			Length:            length,
