@@ -116,5 +116,47 @@ func (fm *FileManager) ReadFromMasterPasswordFile() ([]byte, error) {
 	return masterPassword, nil
 }
 
+func (fm *FileManager) recursiveDirRead(dirPath string) ([]string, error) {
+	files, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var fileNames []string
+	for _, file := range files {
+		if file.IsDir() {
+			subdirFiles, err := fm.recursiveDirRead(path.Join(dirPath, file.Name()))
+			if err != nil {
+				return nil, err
+			}
+
+			fileNames = append(fileNames, subdirFiles...)
+		} else {
+			fileNames = append(fileNames, path.Join(dirPath, file.Name()))
+		}
+	}
+
+	return fileNames, nil
+}
+
+func (fm *FileManager) GetAllPasswords() ([]string, error) {
+	fileNames, err := fm.recursiveDirRead(fm.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	filteredFileNames := make([]string, 0)
+	for _, file := range fileNames {
+		if strings.HasSuffix(file, fm.SecretKeyFileName) || strings.HasSuffix(file, fm.MasterPasswordFileName) {
+			continue
+		}
+
+		name := strings.TrimPrefix(file, fm.Path+"/")
+		filteredFileNames = append(filteredFileNames, name)
+	}
+
+	return filteredFileNames, nil
+}
+
 var dir, _ = os.UserHomeDir()
 var Manager = NewFileManager(path.Join(dir, ".burrow"))
