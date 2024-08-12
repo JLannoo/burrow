@@ -47,12 +47,16 @@ func GenerateRandomKey() ([]byte, error) {
 }
 
 func GenerateUnlockKey(hashedMasterPassword string) ([]byte, error) {
+	if(hashedMasterPassword == "") {
+		return nil, errors.New("hashedMasterPassword is empty")
+	}
+
 	keyBytes, err := files.Manager.ReadFromSecretKeyFile()
 	if err != nil {
 		return nil, errors.New("your secret key file is missing, please run burrow init")
 	}
 
-	return HashSHA256(string(keyBytes) + string(hashedMasterPassword)), nil
+	return HashSHA256(string(keyBytes) + hashedMasterPassword), nil
 }
 
 func pad(data []byte, size int) []byte {
@@ -107,6 +111,8 @@ func Decrypt(data []byte, key []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	fmt.Printf("data: %v\nkey: %v\n\n", data, key)
+
 	if len(data) < aes.BlockSize {
 		return nil, fmt.Errorf("ciphertext too short")
 	}
@@ -114,8 +120,12 @@ func Decrypt(data []byte, key []byte) ([]byte, error) {
 	iv := data[:aes.BlockSize]
 	data = data[aes.BlockSize:]
 
+	fmt.Printf("data: %v\nkey: %v\niv: %v\n\n", data, key, iv)
+
 	mode := cipher.NewCBCDecrypter(block, iv)
 	mode.CryptBlocks(data, data)
+
+	fmt.Printf("data: %v\nkey: %v\niv: %v\n\n", data, key, iv)
 
 	data, err = pkcs7Unpad(data, aes.BlockSize)
 	if err != nil {
