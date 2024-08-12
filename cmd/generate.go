@@ -1,12 +1,15 @@
 /*
 Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
 	"fmt"
+	"strconv"
 
+	"github.com/jlannoo/burrow/pkg/auth"
+	"github.com/jlannoo/burrow/pkg/crypto"
+	"github.com/jlannoo/burrow/pkg/files"
 	"github.com/spf13/cobra"
 )
 
@@ -14,10 +17,56 @@ import (
 var generateCmd = &cobra.Command{
 	Use:   "generate [name] [length]",
 	Short: "Generate a new password",
-	Long: `Generate a new password with the specified length.`,
-	Args: cobra.ExactArgs(2),
+	Long:  `Generate a new password with the specified length.`,
+	Args:  cobra.RangeArgs(1, 2),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("generate called")
+		name := args[0]
+
+		length := 16
+		var err error
+		if len(args) == 2 {
+			length, err = strconv.Atoi(args[1])
+			if err != nil {
+				fmt.Println("Error parsing length:", err)
+				return
+			}
+		}
+
+		fmt.Printf("Generating password for %s with length %d\n", name, length)
+
+		pg := crypto.PasswordGenerator{
+			Length:            length,
+			SpecialCharacters: true,
+			Numbers:           true,
+			Lowercase:         true,
+			Uppercase:         true,
+		}
+
+		password := pg.Generate()
+		if err != nil {
+			fmt.Println("Error generating password:", err)
+			return
+		}
+
+		unlockKey, err := crypto.GenerateUnlockKey(string(auth.Manager.HashedMasterPassword))
+		if err != nil {
+			fmt.Println("Error generating unlock key:", err)
+			return
+		}
+
+		encryptedPassword, err := crypto.Encrypt([]byte(password), unlockKey)
+		if err != nil {
+			fmt.Println("Error encrypting password:", err)
+			return
+		}
+
+		err = files.Manager.WriteToFile(encryptedPassword, name)
+		if err != nil {
+			fmt.Println("Could not create password file:", err)
+			return
+		}
+
+		fmt.Println("Password added successfully!")
 	},
 }
 
