@@ -1,6 +1,7 @@
 package files
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -12,6 +13,8 @@ type FileManager struct {
 	Path string
 	// Path to the file where the secret key is stored
 	SecretKeyFileName string
+	// Path to the file where the master password is temporarily stored
+	MasterPasswordFileName string
 }
 
 // Creates a new FileManager with the given path
@@ -22,8 +25,9 @@ func NewFileManager(dirPath string) *FileManager {
 	}
 
 	return &FileManager{
-		Path:              dirPath,
-		SecretKeyFileName: ".key",
+		Path:                   dirPath,
+		SecretKeyFileName:      ".key",
+		MasterPasswordFileName: ".master",
 	}
 }
 
@@ -76,12 +80,40 @@ func (fm *FileManager) ReadFromFile(filename string) ([]byte, error) {
 	return data, nil
 }
 
+func (fm *FileManager) GetFileUpdateTime(filename string) (int64, error) {
+	finalPath := path.Join(fm.Path, filename)
+	file, err := os.Open(finalPath)
+	if err != nil {
+		return 0, err
+	}
+
+	stat, err := file.Stat()
+	if err != nil {
+		return 0, err
+	}
+
+	return stat.ModTime().UnixMilli(), nil
+}
+
 func (fm *FileManager) WriteToSecretKeyFile(data []byte) error {
 	return fm.WriteToFile(data, fm.SecretKeyFileName)
 }
 
 func (fm *FileManager) ReadFromSecretKeyFile() ([]byte, error) {
 	return fm.ReadFromFile(fm.SecretKeyFileName)
+}
+
+func (fm *FileManager) WriteToMasterPasswordFile(data []byte) error {
+	return fm.WriteToFile(data, fm.MasterPasswordFileName)
+}
+
+func (fm *FileManager) ReadFromMasterPasswordFile() ([]byte, error) {
+	masterPassword, err := fm.ReadFromFile(fm.MasterPasswordFileName)
+	if err != nil {
+		return nil, errors.New("master password file not found")
+	}
+
+	return masterPassword, nil
 }
 
 var dir, _ = os.UserHomeDir()

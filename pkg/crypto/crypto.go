@@ -29,6 +29,10 @@ func HashSHA256(password string) []byte {
 	return hashPassword(sha256.New(), password)
 }
 
+func CompareSHA256(password string, hash []byte) bool {
+	return ComparePasswords(sha256.New(), password, hash)
+}
+
 func GenerateRandomBytes(n int) ([]byte, error) {
 	b := make([]byte, n)
 	_, err := rand.Read(b)
@@ -42,15 +46,13 @@ func GenerateRandomKey() ([]byte, error) {
 	return GenerateRandomBytes(32)
 }
 
-func GenerateUnlockKey(masterPassword string) ([]byte, error) {
-	hashedPassword := HashSHA256(masterPassword)
-
+func GenerateUnlockKey(hashedMasterPassword string) ([]byte, error) {
 	keyBytes, err := files.Manager.ReadFromSecretKeyFile()
 	if err != nil {
-		return nil, err
+		return nil, errors.New("your secret key file is missing, please run burrow init")
 	}
 
-	return HashSHA256(string(keyBytes) + string(hashedPassword)), nil
+	return HashSHA256(string(keyBytes) + string(hashedMasterPassword)), nil
 }
 
 func pad(data []byte, size int) []byte {

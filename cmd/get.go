@@ -5,12 +5,12 @@ package cmd
 
 import (
 	"fmt"
-	"syscall"
 
+	"github.com/jlannoo/burrow/pkg/auth"
 	"github.com/jlannoo/burrow/pkg/crypto"
 	"github.com/jlannoo/burrow/pkg/files"
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
+	"golang.design/x/clipboard"
 )
 
 // getCmd represents the get command
@@ -21,38 +21,49 @@ var getCmd = &cobra.Command{
 
 The password will be decrypted using AES encryption and displayed in the terminal.`,
 	Args: cobra.ExactArgs(1),
+	PreRun: func(cmd *cobra.Command, args []string) {
+		auth.Manager.Authenticate()
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
 
-		fmt.Println("Enter master password:")
-		masterPassword, err := term.ReadPassword(int(syscall.Stdin))
-		if err != nil {
-			fmt.Println("Error reading master password:", err)
-			return
+		var password []byte
+		for len(password) == 0 {
+			unlockKey, err := crypto.GenerateUnlockKey(string(auth.Manager.HashedMasterPassword))
+			if err != nil {
+				fmt.Println("Error generating encryption key", err)
+				return
+			}
+
+			encryptedPassword, err := files.Manager.ReadFromFile(name)
+			if err != nil {
+				fmt.Println("Could not find password file for", name)
+				return
+			}
+
+			password, err = crypto.Decrypt(encryptedPassword, unlockKey)
+			if len(password) == 0 || err != nil {
+				fmt.Println("Incorrect master password, please try again")
+				auth.Manager.GetAuth()
+			}
 		}
 
-		unlockKey, err := crypto.GenerateUnlockKey(string(masterPassword))
-		if err != nil {
-			fmt.Println("Error generating encryption key", err)
-			return
-		}
+		if display, _ := cmd.Flags().GetBool("display"); !display {
+			err := clipboard.Init()
+			clipboard.Write(clipboard.FmtText, password)
 
-		encryptedPassword, err := files.Manager.ReadFromFile(name)
-		if err != nil {
-			fmt.Println("Could not find password file for", name)
-			return
+			if err != nil {
+				fmt.Println("Error copying password to clipboard")
+				return
+			}
+			fmt.Printf("Password for %s copied to clipboard\n", name)
+		} else {
+			fmt.Printf("Password for %s: %s\n", name, password)
 		}
-
-		password, err := crypto.Decrypt(encryptedPassword, unlockKey)
-		if err != nil {
-			fmt.Println("Error decrypting password, check your master password")
-			return
-		}
-
-		fmt.Printf("Password for %s: %s\n", name, password)
 	},
 }
 
 func init() {
+	getCmd.Flags().BoolP("display", "d", false, "Display password in terminal instead of copying to clipboard")
 	rootCmd.AddCommand(getCmd)
 }

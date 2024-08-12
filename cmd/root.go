@@ -4,6 +4,7 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -20,12 +21,16 @@ You can add, remove, and list passwords using the CLI.`,
 }
 
 func Execute() {
+	fmt.Println()
+
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
+
+	fmt.Println()
 }
 
 func init() {
-	
+
 }
