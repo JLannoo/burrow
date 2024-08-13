@@ -24,6 +24,7 @@ var generateCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
+		user := cmd.Flag("username").Value.String()
 
 		length := 16
 		var err error
@@ -55,13 +56,24 @@ var generateCmd = &cobra.Command{
 			return
 		}
 
+		encryptedUser := []byte{}
+		if user != "" {
+			encryptedUser, err = crypto.Encrypt([]byte(user), unlockKey)
+			if err != nil {
+				fmt.Println("Error encrypting username:", err)
+				return
+			}
+		}
+
 		encryptedPassword, err := crypto.Encrypt([]byte(password), unlockKey)
 		if err != nil {
 			fmt.Println("Error encrypting password:", err)
 			return
 		}
 
-		err = files.Manager.WriteToFile(encryptedPassword, name)
+		fileBytes := files.Manager.JoinBytes(encryptedPassword, encryptedUser)
+
+		err = files.Manager.WriteToFile(fileBytes, name)
 		if err != nil {
 			fmt.Println("Could not create password file:", err)
 			return
@@ -72,5 +84,6 @@ var generateCmd = &cobra.Command{
 }
 
 func init() {
+	generateCmd.Flags().StringP("username", "u", "", "Username associated to the password")
 	rootCmd.AddCommand(generateCmd)
 }

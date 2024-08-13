@@ -27,6 +27,7 @@ The password will be encrypted using AES encryption and stored in a file on your
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
+		user := cmd.Flag("username").Value.String()
 
 		fmt.Println("Enter password to store: ")
 		password, err := term.ReadPassword(int(syscall.Stdin))
@@ -47,7 +48,18 @@ The password will be encrypted using AES encryption and stored in a file on your
 			return
 		}
 
-		err = files.Manager.WriteToFile(encryptedPassword, name)
+		encryptedUser := []byte{}
+		if user != "" {
+			encryptedUser, err = crypto.Encrypt([]byte(user), unlockKey)
+			if err != nil {
+				fmt.Println("Error encrypting username:", err)
+				return
+			}
+		}
+
+		fileBytes := files.Manager.JoinBytes(encryptedPassword, encryptedUser)
+
+		err = files.Manager.WriteToFile(fileBytes, name)
 		if err != nil {
 			fmt.Println("Could not create password file:", err)
 			return
@@ -58,5 +70,6 @@ The password will be encrypted using AES encryption and stored in a file on your
 }
 
 func init() {
+	addCmd.Flags().StringP("username", "u", "", "Username associated to the password")
 	rootCmd.AddCommand(addCmd)
 }

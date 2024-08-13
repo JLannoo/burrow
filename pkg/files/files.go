@@ -1,6 +1,7 @@
 package files
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -15,6 +16,8 @@ type FileManager struct {
 	SecretKeyFileName string
 	// Path to the file where the master password is temporarily stored
 	MasterPasswordFileName string
+	// Separator used to separate the username and password in the file
+	Separator []byte
 }
 
 // Creates a new FileManager with the given path
@@ -28,6 +31,7 @@ func NewFileManager(dirPath string) *FileManager {
 		Path:                   dirPath,
 		SecretKeyFileName:      ".key",
 		MasterPasswordFileName: ".master",
+		Separator:              []byte(";separator;"),
 	}
 }
 
@@ -156,6 +160,14 @@ func (fm *FileManager) GetAllPasswords() ([]string, error) {
 	}
 
 	return filteredFileNames, nil
+}
+
+func (fm *FileManager) JoinBytes(parts ...[]byte) []byte {
+	return bytes.Join(parts, fm.Separator)
+}
+
+func (fm *FileManager) SplitBytes(data []byte) [][]byte {
+	return bytes.Split(data, fm.Separator)
 }
 
 var dir, _ = os.UserHomeDir()

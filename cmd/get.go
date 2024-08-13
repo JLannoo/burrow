@@ -28,6 +28,8 @@ The password will be decrypted using AES encryption and displayed in the termina
 		name := args[0]
 
 		var password []byte
+		var user []byte
+
 		for len(password) == 0 {
 			unlockKey, err := crypto.GenerateUnlockKey(string(auth.Manager.HashedMasterPassword))
 			if err != nil {
@@ -35,10 +37,22 @@ The password will be decrypted using AES encryption and displayed in the termina
 				return
 			}
 
-			encryptedPassword, err := files.Manager.ReadFromFile(name)
+			fileBytes, err := files.Manager.ReadFromFile(name)
 			if err != nil {
 				fmt.Println("Could not find password file for", name)
 				return
+			}
+
+			split := files.Manager.SplitBytes(fileBytes)
+			encryptedPassword := split[0]
+
+			if len(split) > 1 {
+				encryptedUser := split[1]
+				user, err = crypto.Decrypt(encryptedUser, unlockKey)
+				if err != nil {
+					fmt.Println("Error decrypting username:", err)
+					return
+				}
 			}
 
 			password, err = crypto.Decrypt(encryptedPassword, unlockKey)
@@ -56,8 +70,16 @@ The password will be decrypted using AES encryption and displayed in the termina
 				fmt.Println("Error copying password to clipboard")
 				return
 			}
-			fmt.Printf("Password for %s copied to clipboard\n", name)
+
+			if user != nil {
+				fmt.Printf("Password with username '%s' for %s copied to clipboard\n", user, name)
+			} else {
+				fmt.Printf("Password for %s copied to clipboard\n", name)
+			}
 		} else {
+			if user != nil {
+				fmt.Printf("Username for %s: %s\n", name, user)
+			}
 			fmt.Printf("Password for %s: %s\n", name, password)
 		}
 	},
