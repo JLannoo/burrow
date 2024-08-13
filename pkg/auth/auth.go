@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"os"
 	"syscall"
 	"time"
 
@@ -48,7 +49,7 @@ func (a *Auth) GetAuth() ([]byte, error) {
 	} else {
 		fmt.Println("You are currently not authenticated. Please enter your master password to authenticate.")
 	}
-	
+
 	fmt.Println("Enter master password: ")
 	masterPassword, err := term.ReadPassword(int(syscall.Stdin))
 	if err != nil {
@@ -78,12 +79,17 @@ func (a *Auth) GetAuth() ([]byte, error) {
 
 func (a *Auth) Authenticate() ([]byte, error) {
 	if !a.IsAuthed() {
-		return a.GetAuth()
+		_, err := a.GetAuth()
+		if err != nil {
+			fmt.Println("Error authenticating:", err)
+			os.Exit(1)
+		}
 	}
 
 	masterPassword, err := files.Manager.ReadFromMasterPasswordFile()
 	if err != nil {
-		return nil, err
+		fmt.Println("Error reading master password:", err)
+		os.Exit(1)
 	}
 
 	a.HashedMasterPassword = masterPassword
