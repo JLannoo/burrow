@@ -46,7 +46,7 @@ The password will be decrypted using AES encryption and displayed in the termina
 			split := files.Manager.SplitBytes(fileBytes)
 			encryptedPassword := split[0]
 
-			if len(split) > 1 {
+			if len(split) > 1 && len(split[1]) > 0 {
 				encryptedUser := split[1]
 				user, err = crypto.Decrypt(encryptedUser, unlockKey)
 				if err != nil {
