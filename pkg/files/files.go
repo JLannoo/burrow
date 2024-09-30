@@ -84,6 +84,20 @@ func (fm *FileManager) ReadFromFile(filename string) ([]byte, error) {
 	return data, nil
 }
 
+func (fm *FileManager) RemovePassword(name string) error {
+	finalPath := path.Join(fm.Path, name)
+	if _, err := os.Stat(finalPath); os.IsNotExist(err) {
+		return errors.New("password not found")
+	}
+
+	err := os.Remove(finalPath)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (fm *FileManager) GetFileUpdateTime(filename string) (int64, error) {
 	finalPath := path.Join(fm.Path, filename)
 	file, err := os.Open(finalPath)

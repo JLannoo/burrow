@@ -1,12 +1,13 @@
 /*
 Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
 	"fmt"
 
+	"github.com/jlannoo/burrow/pkg/auth"
+	"github.com/jlannoo/burrow/pkg/files"
 	"github.com/spf13/cobra"
 )
 
@@ -17,21 +18,22 @@ var removeCmd = &cobra.Command{
 	Long: `Remove a password from the password store.
 
 The password will be permanently deleted from your computer.`,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		auth.Manager.Authenticate()
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("remove called")
+		name := args[0]
+
+		err := files.Manager.RemovePassword(name)
+		if err != nil {
+			fmt.Println("Error removing password:", err)
+			return
+		}
+
+		fmt.Println("Password removed successfully!")
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(removeCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// removeCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// removeCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
